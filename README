@@ -6,16 +6,16 @@ A User has_many :predictions, and accepts_nested_attributes_for :predictions. A 
 * Create a prediction for that user, with name: "Foo", predicted_value: 0
 * I update the prediction through the user (user.update_attributes with nested predictions_attributes), setting the predicted_value to "foo". 
 * I expect the validator to say that "foo" is not a number, but the update succeeds with no error. 
-* If I instead update the prediction directly, using prediction.update_attributes, it fails as expected. 
-* Also, if I change the name of the prediction as well as setting predicted_value to "foo", the validation kicks in and the update fails.
+* If I change the name of the prediction as well as setting predicted_value to "foo", the validation kicks in and the update fails as expected.
+* If I update the prediction directly, using prediction.update_attributes, it fails as expected. 
 
 I tried to understand what happens, and came up with the following (I don't have a deep understanding of rails internals so I probably got it wrong):
 * When the predicted_value is updated, at one point, "foo" is cast to an integer and becomes 0. This causes the model object to consider the attribute unchanged.
 * Later, when evaluating which associated objects should be validated or saved (in AutosaveAssociation::validate_collection_association), the Prediction object is considered unchanged. It is skipped and no validations are run.
-* When calling update_attributes directly on the Prediction, the validators are always run, and the update fails as expected.
 * When changing another attribute (i.e. name) on the Prediction, the object is considered changed, and all validators are run. The update fails as expected.
+* When calling update_attributes directly on the Prediction, the validators are always run, and the update fails as expected.
 
-I don't know what should be done, but I thought I'd write it up anyway. It would be easy to change the behavior so that validations are always run for associated objects, but that would very likely have a performance impact. I'm guessing that's one reason for not running validations on unchanged objects. The other "obvious" solution would be to actually flag the Prediction as changed even though the actual attribute value wouldn't change due to the cast. But that also seems a bit scary.
+I don't know what should be done, but I thought I'd write it up anyway. It would be easy to change the behavior so that validations are always run for associated objects, but there must be a reason they're not right now (performance?). The other "obvious" solution would be to actually flag the Prediction as changed even though the actual attribute value wouldn't change due to the cast. But that also seems a bit scary.
 
 I created a repo to demonstrate the problem. It's at github.com/matssigge/rails_validation_not_run.
 
